@@ -1,0 +1,14 @@
+Package: usastats
+Title: Tidy Raw USA PSR Data
+Version: 0.0.0.9000
+Authors@R: 
+    person(given = "Hisham",
+           family = "Galalt",
+           role = c("aut", "cre"),
+           email = "galal@unhcr.org")
+Description: A minimalist package to tidy USA Asylum data for UNHCR reporting purposes.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.1
