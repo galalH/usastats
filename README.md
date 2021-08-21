@@ -1,11 +1,18 @@
 # usastats
 
-A minimalist package to tidy USA Asylum data for UNHCR reporting purposes.
+A minimalist package to tidy USA asylum data for UNHCR reporting purposes.
 
 TO-DO list:
-- Data import
+- [ ] Data sources
   - [x] USCIS
-  - [ ] EOIR
+    - [x] import
+    - [x] tidy
+  - [x] EOIR
+    - [x] import
+    - [x] tidy
   - [ ] CBP
-- [ ] Data tidying
-- [ ] Report generation
+    - [ ] scrape
+    - [ ] tidy
+- [ ] Country mapping
+- [ ] ASR/MYSR generation
+- [ ] Shiny app?
