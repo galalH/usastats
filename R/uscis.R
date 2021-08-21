@@ -1,9 +1,10 @@
 #' @importFrom fs dir_ls
-#' @importFrom stringr str_match str_detect str_c
+#' @importFrom stringr str_match str_detect str_c str_to_upper
 #' @importFrom tibble tibble as_tibble
-#' @importFrom purrr set_names map_dbl map detect_index discard is_empty reduce
-#' @importFrom dplyr filter mutate if_else coalesce across inner_join filter select
-#' @importFrom tidyr unnest
+#' @importFrom purrr set_names map_dbl map detect_index discard is_empty reduce compose
+#' @importFrom dplyr filter mutate if_else coalesce across inner_join filter select transmute count rename_with
+#' @importFrom tidyr unnest pivot_longer replace_na
+#' @importFrom forcats fct_collapse
 #' @importFrom readxl read_excel excel_sheets
 read_uscis_chatty <- function(path, ...) {
   files <-
@@ -46,13 +47,57 @@ read_uscis_chatty <- function(path, ...) {
     mutate(`Cases Received` = if_else(is.na(`Cases Received`), Receipts, `Cases Received`),
            `Final Denial` = if_else(is.na(`Final Denial`),`Final Denials`, `Final Denial`),
            Pending = if_else(is.na(Pending), `Pending Affirmative Asylum Cases`, Pending)) |>
-    select(-file, -`Pending Affirmative Asylum Cases`, -Receipts, -`Final Denials`, -starts_with("..."))
+    select(-file, -`Pending Affirmative Asylum Cases`, -Receipts, -`Final Denials`, -starts_with("...")) |>
+    rename_with(~"coo", contains("citizenship")) |>
+    replace_na(list(coo = "UNKNOWN")) |>
+    filter(coo == str_to_upper(coo))
 
-  fear <- data |> filter(dataset != "AFF") |> unnest(data) |> select(-file)
+  aff_stock <-
+    aff |>
+    transmute(dataset, year, month, coo, start = NA_real_, end = Pending) |>
+    pivot_longer(start:end, names_to = "stock", values_to = "n")
 
-  list(AFF = aff,
-       CF = filter(fear, dataset == "CF"),
-       RF = filter(fear, dataset == "RF"))
+  aff_flow <-
+    aff |>
+    select(-Pending) |>
+    pivot_longer(-c(dataset, month, year, coo), names_to = "flow", values_to = "n") |>
+    mutate(flow = compose(as.character, fct_collapse)(
+      flow,
+      applications = c("Cases Received", "Reopened"),
+      recognitions = c("Grants"),
+      rejections = c("Final Denial", "Referrals"),
+      closures = c("Administrative Closures"))) |>
+    filter(flow %in% c("applications", "recognitions", "rejections", "closures")) |>
+    count(dataset, year, month, coo, flow, wt = n)
+
+  fear <-
+    data |>
+    filter(dataset != "AFF") |>
+    unnest(data) |>
+    select(-file) |>
+    rename_with(~"coo", contains("citizenship")) |>
+    replace_na(list(coo = "UNKNOWN")) |>
+    filter(coo == str_to_upper(coo))
+
+  fear_stock <-
+    fear |>
+    transmute(dataset, year, month, coo, start = `Pending At Beginning`, end = `Pending At End`) |>
+    pivot_longer(start:end, names_to = "stock", values_to = "n")
+
+  fear_flow <-
+    fear |>
+    select(-starts_with("Pending")) |>
+    pivot_longer(-c(dataset, month, year, coo), names_to = "flow", values_to = "n") |>
+    mutate(flow = compose(as.character, fct_collapse)(
+      flow,
+      applications = "Receipts Count",
+      recognitions = "Fear Found",
+      rejections = "Fear Not Found",
+      other_level = "closure")) |>
+    count(dataset, year, month, coo, flow, wt = n)
+
+  list(stock = bind_rows(aff_stock, fear_stock),
+       flows = bind_rows(aff_flow, fear_flow))
 }
 
 #' RSD data processing functions
