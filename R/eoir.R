@@ -5,7 +5,7 @@
 #' @importFrom dplyr mutate lead select filter if_any across bind_rows transmute
 #' @importFrom tidyr pivot_longer
 #' @importFrom tidyselect everything last_col
-#' @importFrom purrr map_int detect_index pmap map_dfr
+#' @importFrom purrr map_int detect_index pmap map_dfr pmap_dbl
 #' @importFrom readr read_lines
 
 read_eoir_chatty <- function(path, ...) {
@@ -45,6 +45,15 @@ read_eoir_chatty <- function(path, ...) {
 
                   }))
 
+  censored_sum <- function(...) {
+    pmap_dbl(list(...),
+             \(...)
+             if (all(is.na(unlist(list(...)))))
+               NA
+             else
+               sum(unlist(list(...)), na.rm = TRUE))
+  }
+
   stock <-
     bind_rows(AFF = data$data[[1]], DEF = data$data[[2]], .id = "dataset") |>
     transmute(dataset,
@@ -59,8 +68,7 @@ read_eoir_chatty <- function(path, ...) {
               year = cy, month = NA_real_,
               coo = ...1,
               applications = ...2,
-              # FIXME: how should we handle censored values?
-              recognitions = ...3, rejections = ...4, closures = ...5 + ...6 + ...7) |>
+              recognitions = ...3, rejections = ...4, closures = censored_sum(...5, ...6, ...7)) |>
     pivot_longer(applications:closures, names_to = "flow", values_to = "n")
 
   wth <-
@@ -77,8 +85,7 @@ read_eoir_chatty <- function(path, ...) {
               year = cy, month = NA_real_,
               coo = ...1,
               flow = "recognitions",
-              # FIXME: how should we handle censored values?
-              n = ...2 + ...3)
+              n = censored_sum(...2, ...3))
 
   list(stock = stock,
        flows = bind_rows(flows, wth, cat))
