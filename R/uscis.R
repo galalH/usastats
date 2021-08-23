@@ -1,3 +1,22 @@
+#' @importFrom countrycode countrycode
+#' @importFrom tibble tibble
+#' @importFrom dplyr left_join mutate case_when
+#' @importFrom stringr str_detect
+#' @importFrom purrr set_names
+uscis2hcr <- function(x) {
+  dict <-
+    tibble(coo = unique(x),
+           iso = countrycode(coo, origin = "country.name.en", destination = "iso3c")) |>
+    left_join(popdata::pd_countries) |>
+    # manually fix some entries that were missed by the automatic mapping
+    mutate(code = case_when(coo == "COTE D' IVORE" ~ "ICO",
+                            coo == "STATELESS" ~ "STA",
+                            is.na(code) ~ "UNK",
+                            TRUE ~ code))
+  dict <- set_names(dict$code, dict$coo)
+  dict[x]
+}
+
 #' @importFrom fs dir_ls
 #' @importFrom stringr str_match str_detect str_c str_to_upper
 #' @importFrom tibble tibble as_tibble
@@ -96,8 +115,8 @@ read_uscis_chatty <- function(path, ...) {
       other_level = "closure")) |>
     count(dataset, year, month, coo, flow, wt = n)
 
-  list(stock = bind_rows(aff_stock, fear_stock),
-       flows = bind_rows(aff_flow, fear_flow))
+  list(stock = bind_rows(aff_stock, fear_stock) |> mutate(coo = uscis2hcr(coo)),
+       flows = bind_rows(aff_flow, fear_flow) |> mutate(coo = uscis2hcr(coo)))
 }
 
 #' RSD data processing functions

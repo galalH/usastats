@@ -1,3 +1,25 @@
+#' @importFrom countrycode countrycode
+#' @importFrom tibble tibble
+#' @importFrom dplyr left_join mutate case_when
+#' @importFrom stringr str_detect
+#' @importFrom purrr set_names
+eoir2hcr <- function(x) {
+  dict <-
+    tibble(coo = unique(x),
+           iso = countrycode(coo, origin = "country.name.en", destination = "iso3c")) |>
+    left_join(popdata::pd_countries) |>
+    # manually fix some entries that were missed by the automatic mapping
+    mutate(code = case_when(coo == "HOLLAND" ~ "NET",
+                            coo == "REUNIOUN" ~ "REU",
+                            coo == "UZEBEKISTAN" ~ "UZB",
+                            # FIXME: hackish...
+                            str_detect(coo, "(STATELESS|COUNTRY|NO NATIONALITY)") ~ "STA",
+                            is.na(code) ~ "UNK",
+                            TRUE ~ code))
+  dict <- set_names(dict$code, dict$coo)
+  dict[x]
+}
+
 #' @importFrom fs dir_ls
 #' @importFrom pdftools pdf_text
 #' @importFrom stringr str_match str_detect str_split
@@ -7,7 +29,6 @@
 #' @importFrom tidyselect everything last_col
 #' @importFrom purrr map_int detect_index pmap map_dfr pmap_dbl
 #' @importFrom readr read_lines
-
 read_eoir_chatty <- function(path, ...) {
   file <- dir_ls(path, recurse = TRUE, regex = "EOIR.*\\.pdf$")
 
@@ -87,8 +108,8 @@ read_eoir_chatty <- function(path, ...) {
               flow = "recognitions",
               n = censored_sum(...2, ...3))
 
-  list(stock = stock,
-       flows = bind_rows(flows, wth, cat))
+  list(stock = stock |> mutate(coo = eoir2hcr(coo)),
+       flows = bind_rows(flows, wth, cat) |> mutate(coo = eoir2hcr(coo)))
 }
 
 #' RSD data processing functions

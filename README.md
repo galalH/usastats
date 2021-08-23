@@ -13,6 +13,6 @@ TO-DO list:
   - [ ] CBP
     - [ ] scrape
     - [ ] tidy
-- [ ] Country mapping
+- [x] Country mapping
 - [ ] ASR/MYSR generation
 - [ ] Shiny app?
