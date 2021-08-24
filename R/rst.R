@@ -1,21 +1,3 @@
-#' @importFrom countrycode countrycode
-#' @importFrom tibble tibble
-#' @importFrom dplyr left_join mutate case_when
-#' @importFrom stringr str_detect
-#' @importFrom purrr set_names compose
-wraps2hcr <- function(x) {
-  dict <-
-    tibble(coo = unique(x),
-           iso = countrycode(coo, origin = "country.name.en", destination = "iso3c")) |>
-    left_join(popdata::pd_countries) |>
-    # manually fix some entries that were missed by the automatic mapping
-    mutate(code = case_when(coo == "Yemen (Sanaa)" ~ "YEM",
-                            is.na(code) ~ "UNK",
-                            TRUE ~ code))
-  dict <- set_names(dict$code, dict$coo)
-  dict[x]
-}
-
 #' @importFrom fs path_temp
 #' @importFrom rvest session html_elements html_attr
 #' @importFrom httr GET write_disk
@@ -24,7 +6,7 @@ wraps2hcr <- function(x) {
 #' @importFrom dplyr select filter mutate if_else transmute
 #' @importFrom tidyr pivot_longer
 #' @importFrom stringr str_detect str_to_upper
-read_wrapsnet_chatty <- function(...) {
+read_wraps_chatty <- function(...) {
   tmpf <- path_temp("admissions.xlsx")
 
   report_path <-
@@ -51,7 +33,7 @@ read_wrapsnet_chatty <- function(...) {
     data |>
     transmute(dataset = "WRAPS",
               year, month = map_dbl(month, agrep, str_to_upper(month.abb), max.distance = 0),
-              coo = wraps2hcr(coo),
+              coo = hcrcode(coo, src = "WRAPS"),
               flow = "admissions",
               n)
 
@@ -67,4 +49,4 @@ read_wrapsnet_chatty <- function(...) {
 #' @importFrom purrr quietly
 #' @rdname rst
 #' @export
-read_wrapsnet <- function(...) { quietly(read_wrapsnet_chatty)(...)$result }
+read_wraps <- function(...) { quietly(read_wraps_chatty)(...)$result }
