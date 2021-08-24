@@ -24,6 +24,7 @@ uscis2hcr <- function(x) {
 #' @importFrom dplyr filter mutate if_else coalesce across inner_join filter select transmute count rename_with
 #' @importFrom tidyr unnest pivot_longer replace_na
 #' @importFrom forcats fct_collapse
+#' @importFrom readr parse_number
 #' @importFrom readxl read_excel excel_sheets
 read_uscis_chatty <- function(path, ...) {
   files <-
@@ -53,7 +54,7 @@ read_uscis_chatty <- function(path, ...) {
                                               str_c("...", 1:ncol(data)))
                               data <- read_excel(file, sheet = sheet, skip = idx,
                                                  .name_repair = ~ifelse(. == "", nms, .))
-                              mutate(data, across(-1, as.numeric))
+                              mutate(data, across(-1, compose(parse_number, as.character)))
                             }) |>
                           discard(is_empty) |>
                           reduce(inner_join)

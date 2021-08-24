@@ -13,6 +13,9 @@ TO-DO list:
   - [ ] CBP
     - [ ] scrape
     - [ ] tidy
+  - [x] WRAPSnet
+    - [x] import
+    - [x] tidy
 - [x] Country mapping
 - [ ] ASR/MYSR generation
 - [ ] Shiny app?

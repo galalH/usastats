@@ -2,7 +2,7 @@
 #' @importFrom tibble tibble
 #' @importFrom dplyr left_join mutate case_when
 #' @importFrom stringr str_detect
-#' @importFrom purrr set_names
+#' @importFrom purrr set_names compose
 eoir2hcr <- function(x) {
   dict <-
     tibble(coo = unique(x),
@@ -28,13 +28,13 @@ eoir2hcr <- function(x) {
 #' @importFrom tidyr pivot_longer
 #' @importFrom tidyselect everything last_col
 #' @importFrom purrr map_int detect_index pmap map_dfr pmap_dbl
-#' @importFrom readr read_lines
+#' @importFrom readr read_lines parse_number
 read_eoir_chatty <- function(path, ...) {
   file <- dir_ls(path, recurse = TRUE, regex = "EOIR.*\\.pdf$")
 
   pages <- pdf_text(file)
 
-  cy <- str_match(pages[1], "CY (\\d{4})")[,2]
+  cy <- str_match(pages[1], "CY (\\d{4})")[,2] |> as.numeric()
 
   datasets <-
     tribble(~dataset,                                                 ~ncol,
@@ -61,7 +61,7 @@ read_eoir_chatty <- function(path, ...) {
                                 filter(!if_any(everything(), ~.==""),
                                        !if_any(-1, ~!str_detect(., "(\\*|\\d+)")),
                                        !across(1, ~str_detect(., "(?i)total"))) |>
-                                mutate(across(-1, as.numeric))
+                                mutate(across(-1, compose(parse_number, as.character)))
                             })
 
                   }))
@@ -97,7 +97,7 @@ read_eoir_chatty <- function(path, ...) {
     transmute(dataset = "WTH",
               year = cy, month = NA_real_,
               coo = ...1,
-              flow = "recognitions",
+              flow = "grants",
               n = ...2)
 
   cat <-
@@ -105,7 +105,7 @@ read_eoir_chatty <- function(path, ...) {
     transmute(dataset = "CAT",
               year = cy, month = NA_real_,
               coo = ...1,
-              flow = "recognitions",
+              flow = "grants",
               n = censored_sum(...2, ...3))
 
   list(stock = stock |> mutate(coo = eoir2hcr(coo)),
