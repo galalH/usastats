@@ -2,7 +2,7 @@
 
 export(read_eoir)
 export(read_uscis)
-export(read_wrapsnet)
+export(read_wraps)
 importFrom(countrycode,countrycode)
 importFrom(dplyr,across)
 importFrom(dplyr,bind_rows)
